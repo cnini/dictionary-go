@@ -24,10 +24,6 @@ func main() {
 	// 	fmt.Printf("\n-- \"%s\" does not exists. ------", searchTerm)
 	// }
 
-	// termToRemove := "To remove"
-	// fmt.Printf("\n\n-- Removing \"%s\" line. ------", termToRemove)
-	// dictionary.Remove(termToRemove, &wg, errors)
-
 	// fmt.Println("\n\n-- French-English dictionary (after Remove call) ------")
 	// sortedDictionary = dictionary.List(errors)
 

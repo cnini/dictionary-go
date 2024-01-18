@@ -14,3 +14,11 @@ func AddHandler(d *dictionary.Dictionary, wg *sync.WaitGroup, errors chan<- erro
 		d.Add(word, definition, wg, errors)
 	}
 }
+
+func RemoveHandler(d *dictionary.Dictionary, wg *sync.WaitGroup, errors chan<- error) http.HandlerFunc {
+	return func(writer http.ResponseWriter, request *http.Request) {
+		word := request.URL.Query().Get("word")
+
+		d.Remove(word, wg, errors)
+	}
+}
