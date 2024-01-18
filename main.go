@@ -35,9 +35,9 @@ func main() {
 		}
 	}
 
-	// termToRemove := "Supprimer"
-	// fmt.Printf("\n\n-- Removing \"%s\" and its definition. ------", termToRemove)
-	// dictionary.Remove(termToRemove)
+	termToRemove := "To remove"
+	fmt.Printf("\n\n-- Removing \"%s\" line. ------", termToRemove)
+	dictionary.Remove(termToRemove)
 
 	// fmt.Println("\n\n-- French-English dictionary (after Remove call) ------")
 	// sortedDictionary = dictionary.List()

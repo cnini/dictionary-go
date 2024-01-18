@@ -17,9 +17,13 @@ type DictionaryEntry struct {
 }
 
 func NewDictionary(filename string) *Dictionary {
-	return &Dictionary{
+	dictionary := &Dictionary{
 		Filename: filename,
 	}
+
+	dictionary.clearFile()
+
+	return dictionary
 }
 
 func (d Dictionary) Add(word string, definition string) error {
@@ -57,13 +61,24 @@ func (d Dictionary) Get(searchTerm string) (string, string, error) {
 	return "", "", err
 }
 
-// func (d Dictionary) Remove(termToRemove string) {
-// 	// Get the word and not the definition,
-// 	// even if termToRemove is definition
-// 	word, _ := d.Get(termToRemove)
+func (d Dictionary) Remove(termToRemove string) error {
+	dictionaryEntries, err := d.read()
 
-// 	delete(d, word)
-// }
+	if err != nil {
+		return err
+	}
+
+	var updatedDictionaryEntries []DictionaryEntry
+	for _, dictionaryEntry := range dictionaryEntries {
+		if dictionaryEntry.Word != termToRemove && dictionaryEntry.Definition != termToRemove {
+			updatedDictionaryEntries = append(updatedDictionaryEntries, dictionaryEntry)
+		}
+	}
+
+	d.write(updatedDictionaryEntries)
+
+	return nil
+}
 
 // func (d Dictionary) List() []string {
 // 	var sortedDictionary []string
@@ -83,6 +98,16 @@ func (d Dictionary) Get(searchTerm string) (string, string, error) {
 
 // 	return sortedDictionary
 // }
+
+func (d *Dictionary) clearFile() error {
+	file, err := os.Create(d.Filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	return nil
+}
 
 func (d Dictionary) read() ([]DictionaryEntry, error) {
 	dictionaryFile, err := os.Open(d.Filename)
