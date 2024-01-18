@@ -100,7 +100,7 @@ func (d Dictionary) List(errors chan<- error) []string {
 	return sortedDictionary
 }
 
-func (d *Dictionary) clearFile(errors chan<- error) {
+func (d Dictionary) clearFile(errors chan<- error) {
 	file, err := os.Create(d.Filename)
 	if err != nil {
 		errors <- err
