@@ -18,39 +18,34 @@ type DictionaryEntry struct {
 	Definition string
 }
 
-func NewDictionary(filename string, wg *sync.WaitGroup, errors chan<- error) *Dictionary {
-	wg.Add(1)
-
+func NewDictionary(filename string, errors chan<- error) *Dictionary {
 	dictionary := &Dictionary{
 		Filename: filename,
 	}
 
-	dictionary.clearFile(wg, errors)
+	dictionary.clearFile(errors)
 
 	return dictionary
 }
 
 func (d Dictionary) Add(word string, definition string, wg *sync.WaitGroup, errors chan<- error) {
 	wg.Add(1)
+	defer wg.Done()
 
 	dictionaryEntry := DictionaryEntry{
 		Word:       word,
 		Definition: definition,
 	}
 
-	dictionaryEntries := d.read(wg, errors)
-
-	wg.Add(1)
+	dictionaryEntries := d.read(errors)
 
 	dictionaryEntries = append(dictionaryEntries, dictionaryEntry)
 
-	d.write(dictionaryEntries, wg, errors)
+	d.write(dictionaryEntries, errors)
 }
 
-func (d Dictionary) Get(searchTerm string, wg *sync.WaitGroup, errors chan<- error) (string, string) {
-	wg.Add(1)
-
-	dictionaryEntries := d.read(wg, errors)
+func (d Dictionary) Get(searchTerm string, errors chan<- error) (string, string) {
+	dictionaryEntries := d.read(errors)
 
 	for _, dictionaryEntry := range dictionaryEntries {
 		if dictionaryEntry.Word == searchTerm || dictionaryEntry.Definition == searchTerm {
@@ -63,8 +58,9 @@ func (d Dictionary) Get(searchTerm string, wg *sync.WaitGroup, errors chan<- err
 
 func (d Dictionary) Remove(termToRemove string, wg *sync.WaitGroup, errors chan<- error) {
 	wg.Add(1)
+	defer wg.Done()
 
-	dictionaryEntries := d.read(wg, errors)
+	dictionaryEntries := d.read(errors)
 
 	var updatedDictionaryEntries []DictionaryEntry
 	for _, dictionaryEntry := range dictionaryEntries {
@@ -73,20 +69,16 @@ func (d Dictionary) Remove(termToRemove string, wg *sync.WaitGroup, errors chan<
 		}
 	}
 
-	wg.Add(1)
-
-	d.write(updatedDictionaryEntries, wg, errors)
+	d.write(updatedDictionaryEntries, errors)
 }
 
-func (d Dictionary) List(wg *sync.WaitGroup, errors chan<- error) []string {
-	wg.Add(1)
-
+func (d Dictionary) List(errors chan<- error) []string {
 	var sortedDictionary []string
 
 	// Create a list version of the dictionnary to easily sort it
 	var listedDictionary []string
 
-	dictionaryEntries := d.read(wg, errors)
+	dictionaryEntries := d.read(errors)
 
 	for _, dictionaryEntry := range dictionaryEntries {
 		listedDictionary = append(listedDictionary, dictionaryEntry.Word)
@@ -108,9 +100,7 @@ func (d Dictionary) List(wg *sync.WaitGroup, errors chan<- error) []string {
 	return sortedDictionary
 }
 
-func (d *Dictionary) clearFile(wg *sync.WaitGroup, errors chan<- error) {
-	defer wg.Done()
-
+func (d *Dictionary) clearFile(errors chan<- error) {
 	file, err := os.Create(d.Filename)
 	if err != nil {
 		errors <- err
@@ -119,9 +109,7 @@ func (d *Dictionary) clearFile(wg *sync.WaitGroup, errors chan<- error) {
 	defer file.Close()
 }
 
-func (d Dictionary) read(wg *sync.WaitGroup, errors chan<- error) []DictionaryEntry {
-	defer wg.Done()
-
+func (d Dictionary) read(errors chan<- error) []DictionaryEntry {
 	dictionaryFile, err := os.Open(d.Filename)
 	if err != nil {
 		errors <- err
@@ -157,9 +145,7 @@ func (d Dictionary) read(wg *sync.WaitGroup, errors chan<- error) []DictionaryEn
 	return dictionaryEntries
 }
 
-func (d Dictionary) write(dictionaryEntries []DictionaryEntry, wg *sync.WaitGroup, errors chan<- error) {
-	defer wg.Done()
-
+func (d Dictionary) write(dictionaryEntries []DictionaryEntry, errors chan<- error) {
 	dictionaryFile, err := os.Create(d.Filename)
 	if err != nil {
 		errors <- err

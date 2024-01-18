@@ -1,0 +1,6 @@
+Apprendre: To learn
+Enseigner: To teach
+Livre: Book
+Crayon: Pencil
+RAS: Nothing to report
+MDR: LOL
