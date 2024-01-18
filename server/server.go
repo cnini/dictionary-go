@@ -20,6 +20,7 @@ func Start() {
 	http.Handle("/", router)
 
 	router.HandleFunc("/add", route.AddHandler(dictionary, &wg, errors)).Methods("POST")
+	router.HandleFunc("/get", route.GetHandler(dictionary, errors)).Methods("GET")
 	router.HandleFunc("/remove", route.RemoveHandler(dictionary, &wg, errors)).Methods("DELETE")
 }
 
