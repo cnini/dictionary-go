@@ -1,3 +1,3 @@
-module github.com/cnini/dictionary-go
+module dictionary-go
 
 go 1.21.4
