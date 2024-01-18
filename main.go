@@ -16,11 +16,15 @@ func main() {
 	dictionary.Add("MDR", "LOL")
 	dictionary.Add("Supprimer", "To remove")
 
-	// fmt.Println("-- French-English dictionary (after Add calls) ------")
-	// sortedDictionary := dictionary.List()
-	// for _, entry := range sortedDictionary {
-	// 	fmt.Println(entry)
-	// }
+	fmt.Println("-- French-English dictionary (after Add calls) ------")
+	sortedDictionary, listErr := dictionary.List()
+	if listErr != nil {
+		fmt.Printf("\n-- Erreur : %s ------", listErr.Error())
+	} else {
+		for _, entry := range sortedDictionary {
+			fmt.Println(entry)
+		}
+	}
 
 	searchTerm := "RAS"
 	word, definition, getErr := dictionary.Get(searchTerm)
@@ -39,9 +43,13 @@ func main() {
 	fmt.Printf("\n\n-- Removing \"%s\" line. ------", termToRemove)
 	dictionary.Remove(termToRemove)
 
-	// fmt.Println("\n\n-- French-English dictionary (after Remove call) ------")
-	// sortedDictionary = dictionary.List()
-	// for _, entry := range sortedDictionary {
-	// 	fmt.Println(entry)
-	// }
+	fmt.Println("\n\n-- French-English dictionary (after Remove call) ------")
+	sortedDictionary, listErr = dictionary.List()
+	if listErr != nil {
+		fmt.Printf("\n-- Erreur : %s ------", listErr.Error())
+	} else {
+		for _, entry := range sortedDictionary {
+			fmt.Println(entry)
+		}
+	}
 }

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 )
 
@@ -33,7 +34,6 @@ func (d Dictionary) Add(word string, definition string) error {
 	}
 
 	dictionaryEntries, err := d.read()
-
 	if err != nil {
 		return err
 	}
@@ -47,7 +47,6 @@ func (d Dictionary) Add(word string, definition string) error {
 
 func (d Dictionary) Get(searchTerm string) (string, string, error) {
 	dictionaryEntries, err := d.read()
-
 	if err != nil {
 		return "", "", err
 	}
@@ -63,7 +62,6 @@ func (d Dictionary) Get(searchTerm string) (string, string, error) {
 
 func (d Dictionary) Remove(termToRemove string) error {
 	dictionaryEntries, err := d.read()
-
 	if err != nil {
 		return err
 	}
@@ -80,24 +78,35 @@ func (d Dictionary) Remove(termToRemove string) error {
 	return nil
 }
 
-// func (d Dictionary) List() []string {
-// 	var sortedDictionary []string
+func (d Dictionary) List() ([]string, error) {
+	var sortedDictionary []string
 
-// 	// Create a list version of the dictionnary to easily sort it
-// 	var listedDictionary []string
-// 	for word := range d {
-// 		listedDictionary = append(listedDictionary, word)
-// 	}
+	// Create a list version of the dictionnary to easily sort it
+	var listedDictionary []string
+	dictionaryEntries, err := d.read()
+	if err != nil {
+		return nil, err
+	}
 
-// 	sort.Strings(listedDictionary)
+	for _, dictionaryEntry := range dictionaryEntries {
+		listedDictionary = append(listedDictionary, dictionaryEntry.Word)
+	}
 
-// 	for _, word := range listedDictionary {
-// 		definition := d[word]
-// 		sortedDictionary = append(sortedDictionary, fmt.Sprintf("%s: %s", word, definition))
-// 	}
+	sort.Strings(listedDictionary)
 
-// 	return sortedDictionary
-// }
+	for _, word := range listedDictionary {
+		for _, dictionaryEntry := range dictionaryEntries {
+			if dictionaryEntry.Word == word {
+				sortedDictionary = append(
+					sortedDictionary,
+					fmt.Sprintf("%s: %s", dictionaryEntry.Word, dictionaryEntry.Definition),
+				)
+			}
+		}
+	}
+
+	return sortedDictionary, nil
+}
 
 func (d *Dictionary) clearFile() error {
 	file, err := os.Create(d.Filename)
@@ -111,7 +120,6 @@ func (d *Dictionary) clearFile() error {
 
 func (d Dictionary) read() ([]DictionaryEntry, error) {
 	dictionaryFile, err := os.Open(d.Filename)
-
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +156,6 @@ func (d Dictionary) read() ([]DictionaryEntry, error) {
 
 func (d Dictionary) write(dictionaryEntries []DictionaryEntry) error {
 	dictionaryFile, err := os.Create(d.Filename)
-
 	if err != nil {
 		return err
 	}
@@ -159,7 +166,6 @@ func (d Dictionary) write(dictionaryEntries []DictionaryEntry) error {
 		line := fmt.Sprintf("%s: %s\n", dictionaryEntry.Word, dictionaryEntry.Definition)
 
 		_, err := dictionaryFile.WriteString(line)
-
 		if err != nil {
 			return err
 		}
