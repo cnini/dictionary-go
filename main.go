@@ -1,6 +1,9 @@
 package main
 
-import "dictionary-go/dictionary"
+import (
+	"dictionary-go/dictionary"
+	"fmt"
+)
 
 func main() {
 	dictionary := dictionary.NewDictionary("dictionary.txt")
@@ -19,13 +22,18 @@ func main() {
 	// 	fmt.Println(entry)
 	// }
 
-	// searchTerm := "RAS"
-	// word, definition := dictionary.Get(searchTerm)
-	// if word != "" {
-	// 	fmt.Printf("\n-- \"%s\"'s definition : %s. ------", word, definition)
-	// } else {
-	// 	fmt.Printf("\n-- \"%s\" does not exists. ------", searchTerm)
-	// }
+	searchTerm := "RAS"
+	word, definition, getErr := dictionary.Get(searchTerm)
+
+	if getErr != nil {
+		fmt.Printf("\n-- Erreur : %s ------", getErr.Error())
+	} else {
+		if word != "" {
+			fmt.Printf("\n-- \"%s\"'s definition : %s. ------", word, definition)
+		} else {
+			fmt.Printf("\n-- \"%s\" does not exists. ------", searchTerm)
+		}
+	}
 
 	// termToRemove := "Supprimer"
 	// fmt.Printf("\n\n-- Removing \"%s\" and its definition. ------", termToRemove)

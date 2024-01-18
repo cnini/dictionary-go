@@ -41,21 +41,21 @@ func (d Dictionary) Add(word string, definition string) error {
 	return nil
 }
 
-// func (d Dictionary) Get(searchTerm string) (string, string) {
-// 	// If searchTerm is not a definition
-// 	if definition, found := d[searchTerm]; found {
-// 		return searchTerm, definition
-// 	}
+func (d Dictionary) Get(searchTerm string) (string, string, error) {
+	dictionaryEntries, err := d.read()
 
-// 	// If searchTerm is a definition
-// 	for word, definition := range d {
-// 		if definition == searchTerm {
-// 			return word, definition
-// 		}
-// 	}
+	if err != nil {
+		return "", "", err
+	}
 
-// 	return "", ""
-// }
+	for _, dictionaryEntry := range dictionaryEntries {
+		if dictionaryEntry.Word == searchTerm || dictionaryEntry.Definition == searchTerm {
+			return dictionaryEntry.Word, dictionaryEntry.Definition, nil
+		}
+	}
+
+	return "", "", err
+}
 
 // func (d Dictionary) Remove(termToRemove string) {
 // 	// Get the word and not the definition,
@@ -122,7 +122,7 @@ func (d Dictionary) read() ([]DictionaryEntry, error) {
 }
 
 func (d Dictionary) write(dictionaryEntries []DictionaryEntry) error {
-	dictionaryFile, err := os.OpenFile(d.Filename, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
+	dictionaryFile, err := os.Create(d.Filename)
 
 	if err != nil {
 		return err
