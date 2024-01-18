@@ -1,60 +1,61 @@
 package main
 
 import (
-	"dictionary-go/dictionary"
-	"fmt"
-	"sync"
+	"dictionary-go/server"
 )
 
 func main() {
-	var wg sync.WaitGroup
-	errors := make(chan error)
+	server.Start()
+	server.ListenAndServe()
 
-	defer close(errors)
+	// var wg sync.WaitGroup
+	// errors := make(chan error)
 
-	dictionary := dictionary.NewDictionary("dictionary.txt", errors)
+	// defer close(errors)
 
-	dictionaryEntries := []struct {
-		Word       string
-		Definition string
-	}{
-		{"Apprendre", "To learn"},
-		{"Enseigner", "To teach"},
-		{"Livre", "Book"},
-		{"Crayon", "Pencil"},
-		{"RAS", "Nothing to report"},
-		{"MDR", "LOL"},
-		{"Supprimer", "To remove"},
-	}
+	// dictionary := dictionary.NewDictionary("dictionary.txt", errors)
 
-	for _, dictionaryEntry := range dictionaryEntries {
-		dictionary.Add(dictionaryEntry.Word, dictionaryEntry.Definition, &wg, errors)
-	}
+	// dictionaryEntries := []struct {
+	// 	Word       string
+	// 	Definition string
+	// }{
+	// 	{"Apprendre", "To learn"},
+	// 	{"Enseigner", "To teach"},
+	// 	{"Livre", "Book"},
+	// 	{"Crayon", "Pencil"},
+	// 	{"RAS", "Nothing to report"},
+	// 	{"MDR", "LOL"},
+	// 	{"Supprimer", "To remove"},
+	// }
 
-	fmt.Println("-- French-English dictionary (after Add calls) ------")
-	sortedDictionary := dictionary.List(errors)
+	// for _, dictionaryEntry := range dictionaryEntries {
+	// 	dictionary.Add(dictionaryEntry.Word, dictionaryEntry.Definition, &wg, errors)
+	// }
 
-	for _, entry := range sortedDictionary {
-		fmt.Println(entry)
-	}
+	// fmt.Println("-- French-English dictionary (after Add calls) ------")
+	// sortedDictionary := dictionary.List(errors)
 
-	searchTerm := "RAS"
-	word, definition := dictionary.Get(searchTerm, errors)
+	// for _, entry := range sortedDictionary {
+	// 	fmt.Println(entry)
+	// }
 
-	if word != "" {
-		fmt.Printf("\n-- \"%s\"'s definition : %s. ------", word, definition)
-	} else {
-		fmt.Printf("\n-- \"%s\" does not exists. ------", searchTerm)
-	}
+	// searchTerm := "RAS"
+	// word, definition := dictionary.Get(searchTerm, errors)
 
-	termToRemove := "To remove"
-	fmt.Printf("\n\n-- Removing \"%s\" line. ------", termToRemove)
-	dictionary.Remove(termToRemove, &wg, errors)
+	// if word != "" {
+	// 	fmt.Printf("\n-- \"%s\"'s definition : %s. ------", word, definition)
+	// } else {
+	// 	fmt.Printf("\n-- \"%s\" does not exists. ------", searchTerm)
+	// }
 
-	fmt.Println("\n\n-- French-English dictionary (after Remove call) ------")
-	sortedDictionary = dictionary.List(errors)
+	// termToRemove := "To remove"
+	// fmt.Printf("\n\n-- Removing \"%s\" line. ------", termToRemove)
+	// dictionary.Remove(termToRemove, &wg, errors)
 
-	for _, entry := range sortedDictionary {
-		fmt.Println(entry)
-	}
+	// fmt.Println("\n\n-- French-English dictionary (after Remove call) ------")
+	// sortedDictionary = dictionary.List(errors)
+
+	// for _, entry := range sortedDictionary {
+	// 	fmt.Println(entry)
+	// }
 }
