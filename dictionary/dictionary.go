@@ -6,6 +6,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"sync"
 )
 
 type Dictionary struct {
@@ -17,54 +18,53 @@ type DictionaryEntry struct {
 	Definition string
 }
 
-func NewDictionary(filename string) *Dictionary {
+func NewDictionary(filename string, wg *sync.WaitGroup, errors chan<- error) *Dictionary {
+	wg.Add(1)
+
 	dictionary := &Dictionary{
 		Filename: filename,
 	}
 
-	dictionary.clearFile()
+	dictionary.clearFile(wg, errors)
 
 	return dictionary
 }
 
-func (d Dictionary) Add(word string, definition string) error {
+func (d Dictionary) Add(word string, definition string, wg *sync.WaitGroup, errors chan<- error) {
+	wg.Add(1)
+
 	dictionaryEntry := DictionaryEntry{
 		Word:       word,
 		Definition: definition,
 	}
 
-	dictionaryEntries, err := d.read()
-	if err != nil {
-		return err
-	}
+	dictionaryEntries := d.read(wg, errors)
+
+	wg.Add(1)
 
 	dictionaryEntries = append(dictionaryEntries, dictionaryEntry)
 
-	d.write(dictionaryEntries)
-
-	return nil
+	d.write(dictionaryEntries, wg, errors)
 }
 
-func (d Dictionary) Get(searchTerm string) (string, string, error) {
-	dictionaryEntries, err := d.read()
-	if err != nil {
-		return "", "", err
-	}
+func (d Dictionary) Get(searchTerm string, wg *sync.WaitGroup, errors chan<- error) (string, string) {
+	wg.Add(1)
+
+	dictionaryEntries := d.read(wg, errors)
 
 	for _, dictionaryEntry := range dictionaryEntries {
 		if dictionaryEntry.Word == searchTerm || dictionaryEntry.Definition == searchTerm {
-			return dictionaryEntry.Word, dictionaryEntry.Definition, nil
+			return dictionaryEntry.Word, dictionaryEntry.Definition
 		}
 	}
 
-	return "", "", err
+	return "", ""
 }
 
-func (d Dictionary) Remove(termToRemove string) error {
-	dictionaryEntries, err := d.read()
-	if err != nil {
-		return err
-	}
+func (d Dictionary) Remove(termToRemove string, wg *sync.WaitGroup, errors chan<- error) {
+	wg.Add(1)
+
+	dictionaryEntries := d.read(wg, errors)
 
 	var updatedDictionaryEntries []DictionaryEntry
 	for _, dictionaryEntry := range dictionaryEntries {
@@ -73,20 +73,20 @@ func (d Dictionary) Remove(termToRemove string) error {
 		}
 	}
 
-	d.write(updatedDictionaryEntries)
+	wg.Add(1)
 
-	return nil
+	d.write(updatedDictionaryEntries, wg, errors)
 }
 
-func (d Dictionary) List() ([]string, error) {
+func (d Dictionary) List(wg *sync.WaitGroup, errors chan<- error) []string {
+	wg.Add(1)
+
 	var sortedDictionary []string
 
 	// Create a list version of the dictionnary to easily sort it
 	var listedDictionary []string
-	dictionaryEntries, err := d.read()
-	if err != nil {
-		return nil, err
-	}
+
+	dictionaryEntries := d.read(wg, errors)
 
 	for _, dictionaryEntry := range dictionaryEntries {
 		listedDictionary = append(listedDictionary, dictionaryEntry.Word)
@@ -105,23 +105,26 @@ func (d Dictionary) List() ([]string, error) {
 		}
 	}
 
-	return sortedDictionary, nil
+	return sortedDictionary
 }
 
-func (d *Dictionary) clearFile() error {
+func (d *Dictionary) clearFile(wg *sync.WaitGroup, errors chan<- error) {
+	defer wg.Done()
+
 	file, err := os.Create(d.Filename)
 	if err != nil {
-		return err
+		errors <- err
 	}
-	defer file.Close()
 
-	return nil
+	defer file.Close()
 }
 
-func (d Dictionary) read() ([]DictionaryEntry, error) {
+func (d Dictionary) read(wg *sync.WaitGroup, errors chan<- error) []DictionaryEntry {
+	defer wg.Done()
+
 	dictionaryFile, err := os.Open(d.Filename)
 	if err != nil {
-		return nil, err
+		errors <- err
 	}
 
 	defer dictionaryFile.Close()
@@ -148,16 +151,18 @@ func (d Dictionary) read() ([]DictionaryEntry, error) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		return nil, err
+		errors <- err
 	}
 
-	return dictionaryEntries, nil
+	return dictionaryEntries
 }
 
-func (d Dictionary) write(dictionaryEntries []DictionaryEntry) error {
+func (d Dictionary) write(dictionaryEntries []DictionaryEntry, wg *sync.WaitGroup, errors chan<- error) {
+	defer wg.Done()
+
 	dictionaryFile, err := os.Create(d.Filename)
 	if err != nil {
-		return err
+		errors <- err
 	}
 
 	defer dictionaryFile.Close()
@@ -167,9 +172,7 @@ func (d Dictionary) write(dictionaryEntries []DictionaryEntry) error {
 
 		_, err := dictionaryFile.WriteString(line)
 		if err != nil {
-			return err
+			errors <- err
 		}
 	}
-
-	return nil
 }
