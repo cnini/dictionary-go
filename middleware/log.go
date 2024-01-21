@@ -9,15 +9,22 @@ import (
 )
 
 type Log struct {
-	Timestamp string
-	Method    string
-	Url       string
-	Duration  time.Duration
+	Authorization string
+	Timestamp     string
+	Method        string
+	Url           string
+	Duration      time.Duration
 }
 
 var logMutex sync.Mutex
 
-func NewLog(next http.HandlerFunc, w http.ResponseWriter, r *http.Request, errors chan<- error) {
+func NewLog(
+	next http.HandlerFunc,
+	w http.ResponseWriter,
+	r *http.Request,
+	errors chan<- error,
+	authorizationStatus string,
+) {
 	logMutex.Lock()
 	defer logMutex.Unlock()
 
@@ -36,6 +43,7 @@ func NewLog(next http.HandlerFunc, w http.ResponseWriter, r *http.Request, error
 
 	write(
 		Log{
+			authorizationStatus,
 			startTime.Format("2006-01-02 15:04:05"),
 			r.Method,
 			r.URL.String(),
@@ -55,7 +63,8 @@ func write(log Log, errors chan<- error) {
 
 	_, err = logFile.WriteString(
 		fmt.Sprintf(
-			"[%s] %s %s %v\n",
+			"[%s - %s] %s %s %v\n",
+			log.Authorization,
 			log.Timestamp,
 			log.Method,
 			log.Url,
