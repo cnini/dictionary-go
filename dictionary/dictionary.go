@@ -15,11 +15,6 @@ type Dictionary struct {
 	RedisClient *redis.Client
 }
 
-type DictionaryEntry struct {
-	Word       string
-	Definition string
-}
-
 func NewDictionary(errors chan<- error) *Dictionary {
 	client := redis.NewClient(&redis.Options{
 		Addr:     "localhost:6379",
@@ -41,26 +36,33 @@ func (d Dictionary) Add(word string, definition string, wg *sync.WaitGroup, erro
 	wg.Add(1)
 	defer wg.Done()
 
-	dictionaryEntry := DictionaryEntry{
-		Word:       word,
-		Definition: definition,
-	}
-
-	_, err := d.RedisClient.Set(ctx, dictionaryEntry.Word, dictionaryEntry.Definition, 0).Result()
+	_, err := d.RedisClient.Set(ctx, word, definition, 0).Result()
 	if err != nil {
 		errors <- err
 	}
 }
 
 func (d Dictionary) Get(searchTerm string, errors chan<- error) (string, string) {
-	result, err := d.RedisClient.Get(ctx, searchTerm).Result()
-	if err != nil {
-		errors <- err
-		return "", ""
-	}
-
-	if result != "" {
+	// If searchTerm is the word and not the definition
+	if result, _ := d.RedisClient.Get(ctx, searchTerm).Result(); result != "" {
 		return searchTerm, result
+	} else {
+		// If searchTerm is the definition
+		keys, err := d.RedisClient.Keys(ctx, "*").Result()
+		if err != nil {
+			errors <- err
+		}
+
+		for _, word := range keys {
+			definition, err := d.RedisClient.Get(ctx, word).Result()
+			if err != nil {
+				errors <- err
+			}
+
+			if searchTerm == definition {
+				return word, searchTerm
+			}
+		}
 	}
 
 	return "", ""
@@ -70,7 +72,10 @@ func (d Dictionary) Remove(termToRemove string, wg *sync.WaitGroup, errors chan<
 	wg.Add(1)
 	defer wg.Done()
 
-	err := d.RedisClient.Del(ctx, termToRemove).Err()
+	// Get the correct word even if termToRemove is the definition
+	word, _ := d.Get(termToRemove, errors)
+
+	err := d.RedisClient.Del(ctx, word).Err()
 	if err != nil {
 		errors <- err
 	}
@@ -79,17 +84,19 @@ func (d Dictionary) Remove(termToRemove string, wg *sync.WaitGroup, errors chan<
 func (d Dictionary) List(errors chan<- error) []string {
 	var sortedDictionary []string
 
+	// Get all keys from database
 	keys, _ := d.RedisClient.Keys(ctx, "*").Result()
 
+	// Sort all keys
 	sort.Strings(keys)
 
+	// For each keys, get the definition and add their formatted form into sortedDictionary
 	for _, word := range keys {
-		definition, err := d.RedisClient.Get(ctx, word).Result()
-		if err != nil {
-			errors <- err
-		}
+		_, definition := d.Get(word, errors)
 
-		sortedDictionary = append(sortedDictionary, fmt.Sprintf("%s: %s", word, definition))
+		if definition != "" {
+			sortedDictionary = append(sortedDictionary, fmt.Sprintf("%s: %s", word, definition))
+		}
 	}
 
 	return sortedDictionary
