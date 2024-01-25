@@ -1,1 +1,1 @@
-# dictionary-go
+Github link: https://github.com/cnini/dictionary-go
