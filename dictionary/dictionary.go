@@ -79,7 +79,7 @@ func (d Dictionary) Remove(termToRemove string, wg *sync.WaitGroup, errors chan<
 	// Get the correct word even if termToRemove is the definition
 	word, _ := d.Get(termToRemove, errors)
 
-	if word != "" {
+	if word != "" && len(word) >= 1 {
 		err := d.RedisClient.Del(ctx, word).Err()
 		if err != nil {
 			errors <- err
