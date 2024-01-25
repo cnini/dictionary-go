@@ -34,7 +34,8 @@ func AddHandler(d *dictionary.Dictionary, wg *sync.WaitGroup, errors chan<- erro
 			} else {
 				middleware.NewLog(
 					func(w http.ResponseWriter, r *http.Request) {
-						http.Error(writer, "Invalid or not found paramaters", http.StatusBadRequest)
+						errors <- fmt.Errorf("Bad request because invalid or not found parameter")
+						http.Error(writer, "Bad request", http.StatusBadRequest)
 					},
 					writer,
 					request,
@@ -45,6 +46,7 @@ func AddHandler(d *dictionary.Dictionary, wg *sync.WaitGroup, errors chan<- erro
 		} else {
 			middleware.NewLog(
 				func(w http.ResponseWriter, r *http.Request) {
+					errors <- fmt.Errorf("Permission denied because invalid token")
 					http.Error(writer, "Permission denied", http.StatusForbidden)
 				},
 				writer,
@@ -79,7 +81,8 @@ func GetHandler(d *dictionary.Dictionary, errors chan<- error) http.HandlerFunc 
 		} else {
 			middleware.NewLog(
 				func(w http.ResponseWriter, r *http.Request) {
-					http.Error(writer, "Invalid or not found paramater", http.StatusBadRequest)
+					errors <- fmt.Errorf("Bad request because invalid or not found parameter")
+					http.Error(writer, "Bad request", http.StatusBadRequest)
 				},
 				writer,
 				request,
@@ -115,7 +118,8 @@ func RemoveHandler(d *dictionary.Dictionary, wg *sync.WaitGroup, errors chan<- e
 			} else {
 				middleware.NewLog(
 					func(w http.ResponseWriter, r *http.Request) {
-						http.Error(writer, "Invalid or not found paramater", http.StatusBadRequest)
+						errors <- fmt.Errorf("Bad request because invalid or not found parameter")
+						http.Error(writer, "Bad request", http.StatusBadRequest)
 					},
 					writer,
 					request,
@@ -126,6 +130,7 @@ func RemoveHandler(d *dictionary.Dictionary, wg *sync.WaitGroup, errors chan<- e
 		} else {
 			middleware.NewLog(
 				func(w http.ResponseWriter, r *http.Request) {
+					errors <- fmt.Errorf("Permission denied because invalid token")
 					http.Error(writer, "Permission denied", http.StatusForbidden)
 				},
 				writer,

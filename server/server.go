@@ -3,17 +3,14 @@ package server
 import (
 	"dictionary-go/dictionary"
 	"dictionary-go/route"
-	"fmt"
 	"net/http"
 	"sync"
 
 	"github.com/gorilla/mux"
 )
 
-func Start() {
+func Start(errors chan<- error) {
 	var wg sync.WaitGroup
-	errors := make(chan error)
-	defer close(errors)
 
 	dictionary := dictionary.NewDictionary(errors)
 
@@ -23,12 +20,6 @@ func Start() {
 	router.HandleFunc("/add", route.AddHandler(dictionary, &wg, errors)).Methods("POST")
 	router.HandleFunc("/get", route.GetHandler(dictionary, errors)).Methods("GET")
 	router.HandleFunc("/remove", route.RemoveHandler(dictionary, &wg, errors)).Methods("DELETE")
-
-	go func() {
-		for err := range errors {
-			fmt.Println("Error:", err)
-		}
-	}()
 }
 
 func ListenAndServe() {
