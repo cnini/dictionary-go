@@ -1,16 +1,18 @@
 package dictionary
 
 import (
-	"bufio"
+	"context"
 	"fmt"
-	"os"
 	"sort"
-	"strings"
 	"sync"
+
+	"github.com/redis/go-redis/v9"
 )
 
+var ctx = context.Background()
+
 type Dictionary struct {
-	Filename string
+	RedisClient *redis.Client
 }
 
 type DictionaryEntry struct {
@@ -18,14 +20,21 @@ type DictionaryEntry struct {
 	Definition string
 }
 
-func NewDictionary(filename string, errors chan<- error) *Dictionary {
-	dictionary := &Dictionary{
-		Filename: filename,
+func NewDictionary(errors chan<- error) *Dictionary {
+	client := redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "",
+		DB:       0,
+	})
+
+	_, err := client.Ping(ctx).Result()
+	if err != nil {
+		errors <- err
 	}
 
-	dictionary.clearFile(errors)
-
-	return dictionary
+	return &Dictionary{
+		RedisClient: client,
+	}
 }
 
 func (d Dictionary) Add(word string, definition string, wg *sync.WaitGroup, errors chan<- error) {
@@ -37,20 +46,21 @@ func (d Dictionary) Add(word string, definition string, wg *sync.WaitGroup, erro
 		Definition: definition,
 	}
 
-	dictionaryEntries := d.read(errors)
-
-	dictionaryEntries = append(dictionaryEntries, dictionaryEntry)
-
-	d.write(dictionaryEntries, errors)
+	_, err := d.RedisClient.Set(ctx, dictionaryEntry.Word, dictionaryEntry.Definition, 0).Result()
+	if err != nil {
+		errors <- err
+	}
 }
 
 func (d Dictionary) Get(searchTerm string, errors chan<- error) (string, string) {
-	dictionaryEntries := d.read(errors)
+	result, err := d.RedisClient.Get(ctx, searchTerm).Result()
+	if err != nil {
+		errors <- err
+		return "", ""
+	}
 
-	for _, dictionaryEntry := range dictionaryEntries {
-		if dictionaryEntry.Word == searchTerm || dictionaryEntry.Definition == searchTerm {
-			return dictionaryEntry.Word, dictionaryEntry.Definition
-		}
+	if result != "" {
+		return searchTerm, result
 	}
 
 	return "", ""
@@ -60,105 +70,27 @@ func (d Dictionary) Remove(termToRemove string, wg *sync.WaitGroup, errors chan<
 	wg.Add(1)
 	defer wg.Done()
 
-	dictionaryEntries := d.read(errors)
-
-	var updatedDictionaryEntries []DictionaryEntry
-	for _, dictionaryEntry := range dictionaryEntries {
-		if dictionaryEntry.Word != termToRemove && dictionaryEntry.Definition != termToRemove {
-			updatedDictionaryEntries = append(updatedDictionaryEntries, dictionaryEntry)
-		}
+	err := d.RedisClient.Del(ctx, termToRemove).Err()
+	if err != nil {
+		errors <- err
 	}
-
-	d.write(updatedDictionaryEntries, errors)
 }
 
 func (d Dictionary) List(errors chan<- error) []string {
 	var sortedDictionary []string
 
-	// Create a list version of the dictionnary to easily sort it
-	var listedDictionary []string
+	keys, _ := d.RedisClient.Keys(ctx, "*").Result()
 
-	dictionaryEntries := d.read(errors)
+	sort.Strings(keys)
 
-	for _, dictionaryEntry := range dictionaryEntries {
-		listedDictionary = append(listedDictionary, dictionaryEntry.Word)
-	}
-
-	sort.Strings(listedDictionary)
-
-	for _, word := range listedDictionary {
-		for _, dictionaryEntry := range dictionaryEntries {
-			if dictionaryEntry.Word == word {
-				sortedDictionary = append(
-					sortedDictionary,
-					fmt.Sprintf("%s: %s", dictionaryEntry.Word, dictionaryEntry.Definition),
-				)
-			}
-		}
-	}
-
-	return sortedDictionary
-}
-
-func (d Dictionary) clearFile(errors chan<- error) {
-	file, err := os.Create(d.Filename)
-	if err != nil {
-		errors <- err
-	}
-
-	defer file.Close()
-}
-
-func (d Dictionary) read(errors chan<- error) []DictionaryEntry {
-	dictionaryFile, err := os.Open(d.Filename)
-	if err != nil {
-		errors <- err
-	}
-
-	defer dictionaryFile.Close()
-
-	var dictionaryEntries []DictionaryEntry
-
-	scanner := bufio.NewScanner(dictionaryFile)
-
-	for scanner.Scan() {
-		line := scanner.Text()
-
-		// Split the line in two parts
-		lineParts := strings.SplitN(line, ":", 2)
-
-		if len(lineParts) == 2 {
-			// Recreate a new DictionaryEntry
-			dictionaryEntry := DictionaryEntry{
-				Word:       strings.TrimSpace(lineParts[0]),
-				Definition: strings.TrimSpace(lineParts[1]),
-			}
-
-			dictionaryEntries = append(dictionaryEntries, dictionaryEntry)
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		errors <- err
-	}
-
-	return dictionaryEntries
-}
-
-func (d Dictionary) write(dictionaryEntries []DictionaryEntry, errors chan<- error) {
-	dictionaryFile, err := os.Create(d.Filename)
-	if err != nil {
-		errors <- err
-	}
-
-	defer dictionaryFile.Close()
-
-	for _, dictionaryEntry := range dictionaryEntries {
-		line := fmt.Sprintf("%s: %s\n", dictionaryEntry.Word, dictionaryEntry.Definition)
-
-		_, err := dictionaryFile.WriteString(line)
+	for _, word := range keys {
+		definition, err := d.RedisClient.Get(ctx, word).Result()
 		if err != nil {
 			errors <- err
 		}
+
+		sortedDictionary = append(sortedDictionary, fmt.Sprintf("%s: %s", word, definition))
 	}
+
+	return sortedDictionary
 }

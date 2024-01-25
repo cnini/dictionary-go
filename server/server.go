@@ -14,7 +14,7 @@ func Start() {
 	errors := make(chan error)
 	defer close(errors)
 
-	dictionary := dictionary.NewDictionary("dictionary.txt", errors)
+	dictionary := dictionary.NewDictionary(errors)
 
 	router := mux.NewRouter()
 	http.Handle("/", router)
