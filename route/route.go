@@ -14,21 +14,33 @@ func AddHandler(d *dictionary.Dictionary, wg *sync.WaitGroup, errors chan<- erro
 			word := request.URL.Query().Get("word")
 			definition := request.URL.Query().Get("definition")
 
-			middleware.NewLog(
-				func(w http.ResponseWriter, r *http.Request) {
-					d.Add(word, definition, wg, errors)
-				},
-				writer,
-				request,
-				errors,
-				"AUTHORIZED",
-			)
+			if word != "" && definition != "" {
+				middleware.NewLog(
+					func(w http.ResponseWriter, r *http.Request) {
+						d.Add(word, definition, wg, errors)
+					},
+					writer,
+					request,
+					errors,
+					"AUTHORIZED",
+				)
 
-			fmt.Println("\n-- French-English dictionary ------")
-			sortedDictionary := d.List(errors)
+				fmt.Println("\n-- French-English dictionary ------")
+				sortedDictionary := d.List(errors)
 
-			for _, entry := range sortedDictionary {
-				fmt.Println(entry)
+				for _, entry := range sortedDictionary {
+					fmt.Println(entry)
+				}
+			} else {
+				middleware.NewLog(
+					func(w http.ResponseWriter, r *http.Request) {
+						http.Error(writer, "Invalid or not found paramaters", http.StatusBadRequest)
+					},
+					writer,
+					request,
+					errors,
+					"BAD_REQUEST",
+				)
 			}
 		} else {
 			middleware.NewLog(
@@ -48,21 +60,33 @@ func GetHandler(d *dictionary.Dictionary, errors chan<- error) http.HandlerFunc 
 	return func(writer http.ResponseWriter, request *http.Request) {
 		searchTerm := request.URL.Query().Get("word")
 
-		middleware.NewLog(
-			func(w http.ResponseWriter, r *http.Request) {
-				word, definition := d.Get(searchTerm, errors)
+		if searchTerm != "" {
+			middleware.NewLog(
+				func(w http.ResponseWriter, r *http.Request) {
+					word, definition := d.Get(searchTerm, errors)
 
-				if word != "" {
-					fmt.Printf("\n-- \"%s\": %s. ------\n", word, definition)
-				} else {
-					fmt.Printf("\n-- \"%s\" does not exists. ------\n", searchTerm)
-				}
-			},
-			writer,
-			request,
-			errors,
-			"AUTHORIZED",
-		)
+					if word != "" {
+						fmt.Printf("\n-- \"%s\": %s. ------\n", word, definition)
+					} else {
+						fmt.Printf("\n-- \"%s\" does not exists. ------\n", searchTerm)
+					}
+				},
+				writer,
+				request,
+				errors,
+				"AUTHORIZED",
+			)
+		} else {
+			middleware.NewLog(
+				func(w http.ResponseWriter, r *http.Request) {
+					http.Error(writer, "Invalid or not found paramater", http.StatusBadRequest)
+				},
+				writer,
+				request,
+				errors,
+				"BAD_REQUEST",
+			)
+		}
 	}
 }
 
@@ -71,21 +95,33 @@ func RemoveHandler(d *dictionary.Dictionary, wg *sync.WaitGroup, errors chan<- e
 		if middleware.IsAuthorized(request) {
 			word := request.URL.Query().Get("word")
 
-			middleware.NewLog(
-				func(w http.ResponseWriter, r *http.Request) {
-					d.Remove(word, wg, errors)
-				},
-				writer,
-				request,
-				errors,
-				"AUTHORIZED",
-			)
+			if word != "" {
+				middleware.NewLog(
+					func(w http.ResponseWriter, r *http.Request) {
+						d.Remove(word, wg, errors)
+					},
+					writer,
+					request,
+					errors,
+					"AUTHORIZED",
+				)
 
-			fmt.Println("\n-- French-English dictionary ------")
-			sortedDictionary := d.List(errors)
+				fmt.Println("\n-- French-English dictionary ------")
+				sortedDictionary := d.List(errors)
 
-			for _, entry := range sortedDictionary {
-				fmt.Println(entry)
+				for _, entry := range sortedDictionary {
+					fmt.Println(entry)
+				}
+			} else {
+				middleware.NewLog(
+					func(w http.ResponseWriter, r *http.Request) {
+						http.Error(writer, "Invalid or not found paramater", http.StatusBadRequest)
+					},
+					writer,
+					request,
+					errors,
+					"BAD_REQUEST",
+				)
 			}
 		} else {
 			middleware.NewLog(
