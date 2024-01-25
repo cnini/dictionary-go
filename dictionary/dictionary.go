@@ -36,31 +36,35 @@ func (d Dictionary) Add(word string, definition string, wg *sync.WaitGroup, erro
 	wg.Add(1)
 	defer wg.Done()
 
-	_, err := d.RedisClient.Set(ctx, word, definition, 0).Result()
-	if err != nil {
-		errors <- err
+	if (word != "" && len(word) >= 1) && (definition != "" && len(definition) >= 1) {
+		_, err := d.RedisClient.Set(ctx, word, definition, 0).Result()
+		if err != nil {
+			errors <- err
+		}
 	}
 }
 
 func (d Dictionary) Get(searchTerm string, errors chan<- error) (string, string) {
-	// If searchTerm is the word and not the definition
-	if result, _ := d.RedisClient.Get(ctx, searchTerm).Result(); result != "" {
-		return searchTerm, result
-	} else {
-		// If searchTerm is the definition
-		keys, err := d.RedisClient.Keys(ctx, "*").Result()
-		if err != nil {
-			errors <- err
-		}
-
-		for _, word := range keys {
-			definition, err := d.RedisClient.Get(ctx, word).Result()
+	if searchTerm != "" && len(searchTerm) >= 1 {
+		// If searchTerm is the word and not the definition
+		if result, _ := d.RedisClient.Get(ctx, searchTerm).Result(); result != "" {
+			return searchTerm, result
+		} else {
+			// If searchTerm is the definition
+			keys, err := d.RedisClient.Keys(ctx, "*").Result()
 			if err != nil {
 				errors <- err
 			}
 
-			if searchTerm == definition {
-				return word, searchTerm
+			for _, word := range keys {
+				definition, err := d.RedisClient.Get(ctx, word).Result()
+				if err != nil {
+					errors <- err
+				}
+
+				if searchTerm == definition {
+					return word, searchTerm
+				}
 			}
 		}
 	}
@@ -75,9 +79,11 @@ func (d Dictionary) Remove(termToRemove string, wg *sync.WaitGroup, errors chan<
 	// Get the correct word even if termToRemove is the definition
 	word, _ := d.Get(termToRemove, errors)
 
-	err := d.RedisClient.Del(ctx, word).Err()
-	if err != nil {
-		errors <- err
+	if word != "" {
+		err := d.RedisClient.Del(ctx, word).Err()
+		if err != nil {
+			errors <- err
+		}
 	}
 }
 
